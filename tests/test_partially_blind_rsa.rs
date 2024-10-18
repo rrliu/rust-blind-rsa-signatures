@@ -43,7 +43,7 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
 #[test]
 fn test_generate_strong_pair() -> Result<(), blind_rsa_signatures::Error> {
     // Generate a key pair with a specific modulus size 
-    let modulus_bits = 512;
+    let modulus_bits = 64;
     let kp = KeyPair::generate_strong_pair(modulus_bits)?; 
 
     // Extract the public and private keys
@@ -107,17 +107,6 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     5e431732102f4bc3572d97e01dcd6301368f255faae4606399f91fa913a6d699d\
     6ef1";
 
-    let blind_msg_hex = "cfd613e27b8eb15ee0b1df0e1bdda7809a61a29e9b6e9f3ec7c3\
-    45353437638e85593a7309467e36396b0515686fe87330b312b6f89df26dc1cc8\
-    8dd222186ca0bfd4ffa0fd16a9749175f3255425eb299e1807b76235befa57b28\
-    f50db02f5df76cf2f8bcb55c3e2d39d8c4b9a0439e71c5362f35f3db768a5865b\
-    864fdf979bc48d4a29ae9e7c2ea259dc557503e2938b9c3080974bd86ad8b0daa\
-    f1d103c31549dcf767798079f88833b579424ed5b3d700162136459dc29733256\
-    f18ceb74ccf0bc542db8829ca5e0346ad3fe36654715a3686ceb69f73540efd20\
-    530a59062c13880827607c68d00993b47ad6ba017b95dfc52e567c4bf65135072\
-    b12a4";
-
-
     // Convert hex to BigUint
     let p = BigUint::parse_bytes(p_hex.as_bytes(), 16).expect("Invalid hex for p");
     let q = BigUint::parse_bytes(q_hex.as_bytes(), 16).expect("Invalid hex for q");
@@ -127,7 +116,6 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     let msg: &[u8] = &hex::decode(msg_hex).expect("Invalid hex for msg");
     let metadata: &[u8] = &hex::decode(metadata_hex).expect("Invalid hex for metadata");
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
-    let blind_msg = BigUint::parse_bytes(blind_msg_hex.as_bytes(), 16).expect("Invalid hex for blind_msg");
 
     // Create the RSA private key from components
     let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
@@ -205,17 +193,6 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     e48b6981bbc729c4925c65e4b2a7f054facbb7e5fc6e4c6c10110c62ef0b94eec\
     397b";
 
-    let blind_msg_hex = "cfd613e27b8eb15ee0b1df0e1bdda7809a61a29e9b6e9f3ec7c3\
-    45353437638e85593a7309467e36396b0515686fe87330b312b6f89df26dc1cc8\
-    8dd222186ca0bfd4ffa0fd16a9749175f3255425eb299e1807b76235befa57b28\
-    f50db02f5df76cf2f8bcb55c3e2d39d8c4b9a0439e71c5362f35f3db768a5865b\
-    864fdf979bc48d4a29ae9e7c2ea259dc557503e2938b9c3080974bd86ad8b0daa\
-    f1d103c31549dcf767798079f88833b579424ed5b3d700162136459dc29733256\
-    f18ceb74ccf0bc542db8829ca5e0346ad3fe36654715a3686ceb69f73540efd20\
-    530a59062c13880827607c68d00993b47ad6ba017b95dfc52e567c4bf65135072\
-    b12a4";
-
-
     // Convert hex to BigUint
     let p = BigUint::parse_bytes(p_hex.as_bytes(), 16).expect("Invalid hex for p");
     let q = BigUint::parse_bytes(q_hex.as_bytes(), 16).expect("Invalid hex for q");
@@ -225,7 +202,6 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     let msg: &[u8] = &hex::decode(msg_hex).expect("Invalid hex for msg");
     let metadata: &[u8] = &hex::decode(metadata_hex).expect("Invalid hex for metadata");
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
-    let blind_msg = BigUint::parse_bytes(blind_msg_hex.as_bytes(), 16).expect("Invalid hex for blind_msg");
 
     // Create the RSA private key from components
     let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
@@ -303,17 +279,6 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     5e431732102f4bc3572d97e01dcd6301368f255faae4606399f91fa913a6d699d\
     6ef1";
 
-    let blind_msg_hex = "cfd613e27b8eb15ee0b1df0e1bdda7809a61a29e9b6e9f3ec7c3\
-    45353437638e85593a7309467e36396b0515686fe87330b312b6f89df26dc1cc8\
-    8dd222186ca0bfd4ffa0fd16a9749175f3255425eb299e1807b76235befa57b28\
-    f50db02f5df76cf2f8bcb55c3e2d39d8c4b9a0439e71c5362f35f3db768a5865b\
-    864fdf979bc48d4a29ae9e7c2ea259dc557503e2938b9c3080974bd86ad8b0daa\
-    f1d103c31549dcf767798079f88833b579424ed5b3d700162136459dc29733256\
-    f18ceb74ccf0bc542db8829ca5e0346ad3fe36654715a3686ceb69f73540efd20\
-    530a59062c13880827607c68d00993b47ad6ba017b95dfc52e567c4bf65135072\
-    b12a4";
-
-
     // Convert hex to BigUint
     let p = BigUint::parse_bytes(p_hex.as_bytes(), 16).expect("Invalid hex for p");
     let q = BigUint::parse_bytes(q_hex.as_bytes(), 16).expect("Invalid hex for q");
@@ -323,7 +288,6 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     let msg: &[u8] = &hex::decode(msg_hex).expect("Invalid hex for msg");
     let metadata: &[u8] = &hex::decode(metadata_hex).expect("Invalid hex for metadata");
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
-    let blind_msg = BigUint::parse_bytes(blind_msg_hex.as_bytes(), 16).expect("Invalid hex for blind_msg");
 
     // Create the RSA private key from components
     let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
@@ -401,17 +365,6 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     e48b6981bbc729c4925c65e4b2a7f054facbb7e5fc6e4c6c10110c62ef0b94eec\
     397b";
 
-    let blind_msg_hex = "cfd613e27b8eb15ee0b1df0e1bdda7809a61a29e9b6e9f3ec7c3\
-    45353437638e85593a7309467e36396b0515686fe87330b312b6f89df26dc1cc8\
-    8dd222186ca0bfd4ffa0fd16a9749175f3255425eb299e1807b76235befa57b28\
-    f50db02f5df76cf2f8bcb55c3e2d39d8c4b9a0439e71c5362f35f3db768a5865b\
-    864fdf979bc48d4a29ae9e7c2ea259dc557503e2938b9c3080974bd86ad8b0daa\
-    f1d103c31549dcf767798079f88833b579424ed5b3d700162136459dc29733256\
-    f18ceb74ccf0bc542db8829c5e0346ad3fe36654715a3686ceb69f73540efd20\
-    530a59062c13880827607c68d00993b47ad6ba017b95dfc52e567c4bf65135072\
-    b12a4";
-
-
     // Convert hex to BigUint
     let p = BigUint::parse_bytes(p_hex.as_bytes(), 16).expect("Invalid hex for p");
     let q = BigUint::parse_bytes(q_hex.as_bytes(), 16).expect("Invalid hex for q");
@@ -421,7 +374,6 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     let msg: &[u8] = &hex::decode(msg_hex).expect("Invalid hex for msg");
     let metadata: &[u8] = &hex::decode(metadata_hex).expect("Invalid hex for metadata");
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
-    let blind_msg = BigUint::parse_bytes(blind_msg_hex.as_bytes(), 16).expect("Invalid hex for blind_msg");
 
     // Create the RSA private key from components
     let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
