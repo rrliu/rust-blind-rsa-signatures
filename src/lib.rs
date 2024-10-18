@@ -56,6 +56,7 @@ use hmac_sha512::Hash as Sha512;
 use num_bigint_dig::traits::ModInverse; 
 use num_integer::Integer;
 use num_padding::ToBytesPadded;
+use num_primes::Generator;
 use num_traits::One;
 use rand::{CryptoRng, Rng, RngCore};
 use rsa::algorithms::mgf1_xor;
@@ -229,6 +230,46 @@ impl KeyPair {
         let sk = SecretKey(sk);
         let pk = sk.public_key()?;
         Ok(KeyPair { sk, pk })
+    }
+
+    // Generate a strong prime safe key pair used for Partial Blinding RSA
+    pub fn generate_strong_pair(modulus_bits: usize,) -> Result<KeyPair, Error> {
+        if modulus_bits % 2 != 0 {
+            return Err(Error::UnsupportedParameters); 
+        }
+
+        let p = Self::safe_prime(modulus_bits / 2);
+        let mut q = Self::safe_prime(modulus_bits / 2);
+        let mut n = &p * & q;
+
+        while p == q || n.bits() != modulus_bits {
+            q = Self::safe_prime(modulus_bits / 2);
+            n = &p * &q;
+        }
+
+        let phi = (&p - BigUint::one()) * (&q - BigUint::one());
+        let e = BigUint::from(65537u32);
+        let d = e.clone().mod_inverse(phi.clone()).unwrap().to_biguint().unwrap(); 
+
+        let sk = RsaPrivateKey::from_components(n.clone(), phi, d, vec![p, q]).map_err(|_| Error::InvalidKey)?; 
+        let pk = RsaPublicKey::new(n, e).map_err(|_| Error::UnsupportedParameters)?;
+
+        Ok(KeyPair {
+            pk: PublicKey(pk),
+            sk: SecretKey(sk),
+        })
+    }
+
+    pub fn safe_prime(bits: usize) -> BigUint {
+        loop {
+            let p_prime_num = Generator::safe_prime(bits);
+            let p_prime = BigUint::from_bytes_be(&p_prime_num.to_bytes_be());
+            
+            // protect against too small safe primes
+            if p_prime.bits() >= bits {
+                return p_prime;
+            }
+        }
     }
 }
 
@@ -753,6 +794,7 @@ impl PublicKey {
             return Err(Error::UnsupportedParameters);
         }
         let sig_ = rsa::pss::Signature::try_from(sig.as_ref()).map_err(|_| Error::VerificationFailed)?;
+        println!("{}", sig_);
     
         let verified = match options.hash {
             Hash::Sha256 => {

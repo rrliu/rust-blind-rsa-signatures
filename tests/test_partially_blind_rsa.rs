@@ -3,6 +3,7 @@
 #![cfg(test)]
 
 use blind_rsa_signatures::{Error, Hash, KeyPair, Options, PublicKey, SecretKey};
+use num_primes::Verification;
 use rsa::{BigUint, PublicKeyParts};
 use rand::rngs::ThreadRng;
 use rsa::{RsaPrivateKey, RsaPublicKey};
@@ -14,8 +15,8 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
     let rng = &mut rand::thread_rng();
 
     // [SERVER]: Generate a RSA-2048 key pair
-    let kp = KeyPair::generate(rng, 1024)?;
-
+    let kp = KeyPair::generate_strong_pair(1024)?;
+    
     let (pk, sk) = (kp.pk, kp.sk);
 
     // [CLIENT]: create a random message and blind it for the server whose public key is `pk`.
@@ -35,6 +36,28 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
         metadata,
         &options,
     )?;
+    Ok(())
+}
+
+
+#[test]
+fn test_generate_strong_pair() -> Result<(), blind_rsa_signatures::Error> {
+    // Generate a key pair with a specific modulus size 
+    let kp = KeyPair::generate_strong_pair(512)?; 
+
+    // Extract the public and private keys
+    let (pk, sk) = (kp.pk, kp.sk);
+
+    // Basic Validity Checks
+    // Ensure the modulus is the correct size
+    assert_eq!(pk.n().bits(), 64); 
+
+    // Safe Prime Number Validation 
+     let p = &sk.primes().to_vec()[0];
+     let q = &sk.primes().to_vec()[1];
+     assert!(Verification::is_safe_prime(&num_primes::BigUint::from_bytes_be(&p.to_bytes_be()))); 
+     assert!(Verification::is_safe_prime(&num_primes::BigUint::from_bytes_be(&q.to_bytes_be())));
+
     Ok(())
 }
 
