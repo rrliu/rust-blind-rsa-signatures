@@ -43,14 +43,15 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
 #[test]
 fn test_generate_strong_pair() -> Result<(), blind_rsa_signatures::Error> {
     // Generate a key pair with a specific modulus size 
-    let kp = KeyPair::generate_strong_pair(512)?; 
+    let modulus_bits = 512;
+    let kp = KeyPair::generate_strong_pair(modulus_bits)?; 
 
     // Extract the public and private keys
     let (pk, sk) = (kp.pk, kp.sk);
 
     // Basic Validity Checks
     // Ensure the modulus is the correct size
-    assert_eq!(pk.n().bits(), 64); 
+    assert_eq!(pk.n().bits(), modulus_bits); 
 
     // Safe Prime Number Validation 
      let p = &sk.primes().to_vec()[0];
