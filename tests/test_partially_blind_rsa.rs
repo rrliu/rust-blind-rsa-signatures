@@ -97,7 +97,7 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     a2bf9924c4bafdb3ff5e722258ab705c76d43e5f1f121b984814e98ea2b2b8725\
     cd9bc905c0bc3d75c2a8db70a7153213c39ae371b2b5dc1dafcb19d6fae9";
 
-    let msg_hex=  "";
+    let msg_hex=  "68656c6c6f20776f726c64";
 
     let metadata_hex =  "6d65746164617461";
 
