@@ -253,8 +253,8 @@ impl KeyPair {
         let e = BigUint::from(65537u32);
         let d = e.clone().mod_inverse(phi.clone()).unwrap().to_biguint().unwrap(); 
 
-        let sk = RsaPrivateKey::from_components(n.clone(), phi, d, vec![p, q]).map_err(|_| Error::InvalidKey)?; 
-        let pk = RsaPublicKey::new(n, e).map_err(|_| Error::UnsupportedParameters)?;
+        let sk = RsaPrivateKey::from_components(n.clone(), e, d, vec![p, q]).map_err(|_| Error::InvalidKey)?; 
+        let pk = sk.to_public_key();
 
         Ok(KeyPair {
             pk: PublicKey(pk),
