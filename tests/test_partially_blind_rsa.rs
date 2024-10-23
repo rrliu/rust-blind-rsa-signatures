@@ -2,12 +2,11 @@
 
 #![cfg(test)]
 
-use blind_rsa_signatures::{Error, Hash, KeyPair, Options, PublicKey, SecretKey};
+use blind_rsa_signatures::{Error, Hash, Options, PublicKey, SecretKey, StrongKeyPair};
 use num_primes::Verification;
-use rsa::{BigUint, PublicKeyParts};
 use rand::rngs::ThreadRng;
+use rsa::{BigUint, PublicKeyParts};
 use rsa::{RsaPrivateKey, RsaPublicKey};
-
 
 #[test]
 fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
@@ -15,17 +14,18 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
     let rng = &mut rand::thread_rng();
 
     // [SERVER]: Generate a RSA-2048 key pair
-    let kp = KeyPair::generate_strong_pair(1024)?;
-    
+    let kp = StrongKeyPair::generate_strong_pair(1024)?;
+
     let (pk, sk) = (kp.pk, kp.sk);
 
     // [CLIENT]: create a random message and blind it for the server whose public key is `pk`.
     let msg = b"test";
     let metadata = b"metadata";
-    let blinding_result = pk.blind_with_metadata(rng, msg, metadata,true, &options)?;
+    let blinding_result = pk.blind_with_metadata(rng, msg, metadata, true, &options)?;
 
     // [SERVER]: compute a signature for a blind message, to be sent to the client.
-    let blind_sig = sk.blind_sign_with_metadata(rng, &blinding_result.blind_msg, metadata, &options)?;
+    let blind_sig =
+        sk.blind_sign_with_metadata(rng, &blinding_result.blind_msg, metadata, &options)?;
 
     // [CLIENT]: later, redeem a signed blind message
     let _sig = pk.finalize_with_metadata(
@@ -39,31 +39,34 @@ fn test_partially_blind_signature() -> Result<(), blind_rsa_signatures::Error> {
     Ok(())
 }
 
-
 #[test]
 fn test_generate_strong_pair() -> Result<(), blind_rsa_signatures::Error> {
-    // Generate a key pair with a specific modulus size 
+    // Generate a key pair with a specific modulus size
     let modulus_bits = 64;
-    let kp = KeyPair::generate_strong_pair(modulus_bits)?; 
+    let kp = StrongKeyPair::generate_strong_pair(modulus_bits)?;
 
     // Extract the public and private keys
     let (pk, sk) = (kp.pk, kp.sk);
 
     // Basic Validity Checks
     // Ensure the modulus is the correct size
-    assert_eq!(pk.n().bits(), modulus_bits); 
+    assert_eq!(pk.n().bits(), modulus_bits);
 
-    // Safe Prime Number Validation 
-     let p = &sk.primes().to_vec()[0];
-     let q = &sk.primes().to_vec()[1];
-     assert!(Verification::is_safe_prime(&num_primes::BigUint::from_bytes_be(&p.to_bytes_be()))); 
-     assert!(Verification::is_safe_prime(&num_primes::BigUint::from_bytes_be(&q.to_bytes_be())));
+    // Safe Prime Number Validation
+    let p = &sk.primes().to_vec()[0];
+    let q = &sk.primes().to_vec()[1];
+    assert!(Verification::is_safe_prime(
+        &num_primes::BigUint::from_bytes_be(&p.to_bytes_be())
+    ));
+    assert!(Verification::is_safe_prime(
+        &num_primes::BigUint::from_bytes_be(&q.to_bytes_be())
+    ));
 
     Ok(())
 }
 
 #[test]
-fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatures::Error>  {
+fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatures::Error> {
     let options = Options::default();
     let mut rng: ThreadRng = rand::thread_rng();
 
@@ -97,11 +100,11 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     a2bf9924c4bafdb3ff5e722258ab705c76d43e5f1f121b984814e98ea2b2b8725\
     cd9bc905c0bc3d75c2a8db70a7153213c39ae371b2b5dc1dafcb19d6fae9";
 
-    let msg_hex=  "68656c6c6f20776f726c64";
+    let msg_hex = "68656c6c6f20776f726c64";
 
-    let metadata_hex =  "6d65746164617461";
+    let metadata_hex = "6d65746164617461";
 
-    let eprime_hex =  "30581b1adab07ac00a5057e2986f37caaa68ae963ffbc4d36c16ea5f3\
+    let eprime_hex = "30581b1adab07ac00a5057e2986f37caaa68ae963ffbc4d36c16ea5f3\
     689d6f00db79a5bee56053adc53c8d0414d4b754b58c7cc4abef99d4f0d0b2e29\
     cbddf746c7d0f4ae2690d82a2757b088820c0d086a40d180b2524687060d768ad\
     5e431732102f4bc3572d97e01dcd6301368f255faae4606399f91fa913a6d699d\
@@ -118,7 +121,8 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
 
     // Create the RSA private key from components
-    let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
+    let private_key =
+        RsaPrivateKey::from_components(n, e, d, vec![p, q]).map_err(|_| Error::InvalidKey)?;
 
     // Create the corresponding public key
     let public_key = RsaPublicKey::from(&private_key);
@@ -126,14 +130,13 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     let pk = PublicKey(public_key);
     let sk = SecretKey(private_key);
 
-    
-    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata,true, &options)?;
-
+    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata, true, &options)?;
 
     let pk_derived = PublicKey::derive_public_key(pk.n(), metadata, Hash::Sha384)?;
     assert_eq!(pk_derived.e(), &eprime);
 
-    let blind_sig = sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
+    let blind_sig =
+        sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
 
     let _sig = pk.finalize_with_metadata(
         &blind_sig,
@@ -145,11 +148,10 @@ fn test_partially_blind_signature_test_vector1() -> Result<(), blind_rsa_signatu
     )?;
 
     Ok(())
-
 }
 
 #[test]
-fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatures::Error>  {
+fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatures::Error> {
     let options = Options::default();
     let mut rng: ThreadRng = rand::thread_rng();
 
@@ -183,11 +185,11 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     a2bf9924c4bafdb3ff5e722258ab705c76d43e5f1f121b984814e98ea2b2b8725\
     cd9bc905c0bc3d75c2a8db70a7153213c39ae371b2b5dc1dafcb19d6fae9";
 
-    let msg_hex=  "68656c6c6f20776f726c64";
+    let msg_hex = "68656c6c6f20776f726c64";
 
-    let metadata_hex =  "";
+    let metadata_hex = "";
 
-    let eprime_hex =  "2ed579fcdf2d328ebc686c52ccaec247018832acd530a2ac72c0ec2b9\
+    let eprime_hex = "2ed579fcdf2d328ebc686c52ccaec247018832acd530a2ac72c0ec2b9\
     2db5d6bd578e91b6341c1021142b45b9e6e5bf031f3dd62226ec4a0f9ef99e45d\
     d9ccd60aa60a0c59aac271a8caf9ee68a9d9ff281367dae09d588d3c7bca7f18d\
     e48b6981bbc729c4925c65e4b2a7f054facbb7e5fc6e4c6c10110c62ef0b94eec\
@@ -204,7 +206,8 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
 
     // Create the RSA private key from components
-    let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
+    let private_key =
+        RsaPrivateKey::from_components(n, e, d, vec![p, q]).map_err(|_| Error::InvalidKey)?;
 
     // Create the corresponding public key
     let public_key = RsaPublicKey::from(&private_key);
@@ -212,14 +215,13 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     let pk = PublicKey(public_key);
     let sk = SecretKey(private_key);
 
-    
-    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata,true, &options)?;
-
+    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata, true, &options)?;
 
     let pk_derived = PublicKey::derive_public_key(pk.n(), metadata, Hash::Sha384)?;
     assert_eq!(pk_derived.e(), &eprime);
 
-    let blind_sig = sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
+    let blind_sig =
+        sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
 
     let _sig = pk.finalize_with_metadata(
         &blind_sig,
@@ -231,11 +233,10 @@ fn test_partially_blind_signature_test_vector2() -> Result<(), blind_rsa_signatu
     )?;
 
     Ok(())
-
 }
 
 #[test]
-fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatures::Error>  {
+fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatures::Error> {
     let options = Options::default();
     let mut rng: ThreadRng = rand::thread_rng();
 
@@ -269,11 +270,11 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     b705c76d43e5f1f121b984814e98ea2b2b8725cd9bc905c0bc3d75c2a8db70a7153213c39a\
     e371b2b5dc1dafcb19d6fae9";
 
-    let msg_hex=  "";
+    let msg_hex = "";
 
-    let metadata_hex =  "6d65746164617461";
+    let metadata_hex = "6d65746164617461";
 
-    let eprime_hex =  "30581b1adab07ac00a5057e2986f37caaa68ae963ffbc4d36c16ea5f3\
+    let eprime_hex = "30581b1adab07ac00a5057e2986f37caaa68ae963ffbc4d36c16ea5f3\
     689d6f00db79a5bee56053adc53c8d0414d4b754b58c7cc4abef99d4f0d0b2e29\
     cbddf746c7d0f4ae2690d82a2757b088820c0d086a40d180b2524687060d768ad\
     5e431732102f4bc3572d97e01dcd6301368f255faae4606399f91fa913a6d699d\
@@ -290,7 +291,8 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
 
     // Create the RSA private key from components
-    let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
+    let private_key =
+        RsaPrivateKey::from_components(n, e, d, vec![p, q]).map_err(|_| Error::InvalidKey)?;
 
     // Create the corresponding public key
     let public_key = RsaPublicKey::from(&private_key);
@@ -298,14 +300,13 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     let pk = PublicKey(public_key);
     let sk = SecretKey(private_key);
 
-    
-    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata,true, &options)?;
-
+    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata, true, &options)?;
 
     let pk_derived = PublicKey::derive_public_key(pk.n(), metadata, Hash::Sha384)?;
     assert_eq!(pk_derived.e(), &eprime);
 
-    let blind_sig = sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
+    let blind_sig =
+        sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
 
     let _sig = pk.finalize_with_metadata(
         &blind_sig,
@@ -317,11 +318,10 @@ fn test_partially_blind_signature_test_vector3() -> Result<(), blind_rsa_signatu
     )?;
 
     Ok(())
-
 }
 
 #[test]
-fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatures::Error>  {
+fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatures::Error> {
     let options = Options::default();
     let mut rng: ThreadRng = rand::thread_rng();
 
@@ -355,11 +355,11 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     a2bf9924c4bafdb3ff5e722258ab705c76d43e5f1f121b984814e98ea2b2b8725\
     cd9bc905c0bc3d75c2a8db70a7153213c39ae371b2b5dc1dafcb19d6fae9";
 
-    let msg_hex=  "";
+    let msg_hex = "";
 
-    let metadata_hex =  "";
+    let metadata_hex = "";
 
-    let eprime_hex =  "2ed579fcdf2d328ebc686c52ccaec247018832acd530a2ac72c0ec2b9\
+    let eprime_hex = "2ed579fcdf2d328ebc686c52ccaec247018832acd530a2ac72c0ec2b9\
     2db5d6bd578e91b6341c1021142b45b9e6e5bf031f3dd62226ec4a0f9ef99e45d\
     d9ccd60aa60a0c59aac271a8caf9ee68a9d9ff281367dae09d588d3c7bca7f18d\
     e48b6981bbc729c4925c65e4b2a7f054facbb7e5fc6e4c6c10110c62ef0b94eec\
@@ -376,7 +376,8 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     let eprime = BigUint::parse_bytes(eprime_hex.as_bytes(), 16).expect("Invalid hex for e_prime");
 
     // Create the RSA private key from components
-    let private_key = RsaPrivateKey::from_components(n,e,d,vec![p, q]).map_err(|_| Error::InvalidKey)?;
+    let private_key =
+        RsaPrivateKey::from_components(n, e, d, vec![p, q]).map_err(|_| Error::InvalidKey)?;
 
     // Create the corresponding public key
     let public_key = RsaPublicKey::from(&private_key);
@@ -384,14 +385,13 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     let pk = PublicKey(public_key);
     let sk = SecretKey(private_key);
 
-    
-    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata,true, &options)?;
-
+    let blinding_result = pk.blind_with_metadata(&mut rng, msg, metadata, true, &options)?;
 
     let pk_derived = PublicKey::derive_public_key(pk.n(), metadata, Hash::Sha384)?;
     assert_eq!(pk_derived.e(), &eprime);
 
-    let blind_sig = sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
+    let blind_sig =
+        sk.blind_sign_with_metadata(&mut rng, &blinding_result.blind_msg, metadata, &options)?;
 
     let _sig = pk.finalize_with_metadata(
         &blind_sig,
@@ -403,5 +403,4 @@ fn test_partially_blind_signature_test_vector4() -> Result<(), blind_rsa_signatu
     )?;
 
     Ok(())
-
 }
